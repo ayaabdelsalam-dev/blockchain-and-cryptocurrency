@@ -1,0 +1,4 @@
+{
+    "publicKey": "-----BEGIN PUBLIC KEY-----\n...YOUR_PUBLIC_KEY...\n-----END PUBLIC KEY-----",
+    "privateKey": "-----BEGIN PRIVATE KEY-----\n...YOUR_PRIVATE_KEY...\n-----END PRIVATE KEY-----"
+  }

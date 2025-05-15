@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام العملة الرقمية</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+  <div class="container mx-auto p-6 bg-white rounded-lg shadow-lg max-w-2xl">
+    <h1 class="text-2xl font-bold text-center mb-6"> educational cryptocurrency system</h1>
+    
+    <!-- Login Section -->
+    <div class="mb-6">
+      <h2 class="text-xl font-semibold mb-2">تسجيل الدخول</h2>
+      <input type="file" id="configFile" accept=".json" class="mb-2">
+      <button onclick="loadConfig()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">تحميل</button>
+    </div>
+    
+    <!-- Balance Section -->
+    <div class="mb-6">
+      <h2 class="text-xl font-semibold mb-2">الرصيد</h2>
+      <p id="balance" class="text-gray-700">لم يتم تسجيل الدخول</p>
+      <button onclick="fetchBalance()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">تحديث الرصيد</button>
+    </div>
+    
+    <!-- Transaction Section -->
+    <div class="mb-6">
+      <h2 class="text-xl font-semibold mb-2">إرسال معاملة</h2>
+      <input id="recipient" type="text" placeholder="المفتاح العام للمستلم" class="w-full p-2 mb-2 border rounded">
+      <input id="amount" type="number" placeholder="المبلغ" class="w-full p-2 mb-2 border rounded">
+      <button onclick="sendTransaction()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">إرسال</button>
+    </div>
+    
+    <!-- Mine Section -->
+    <div class="mb-6">
+      <h2 class="text-xl font-semibold mb-2">تعدين كتلة</h2>
+      <button onclick="mineBlock()" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">تعدين</button>
+    </div>
+    
+    <!-- Connect Section -->
+    <div class="mb-6">
+      <h2 class="text-xl font-semibold mb-2">الاتصال بمنقب</h2>
+      <input id="minerHost" type="text" placeholder="المضيف (مثال: localhost)" class="w-full p-2 mb-2 border rounded">
+      <input id="minerPort" type="number" placeholder="المنفذ" class="w-full p-2 mb-2 border rounded">
+      <button onclick="connectToMiner()" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">اتصال</button>
+    </div>
+  </div>
+
+  <script>
+    let userConfig = null;
+    const serverUrl = 'http://localhost:3000';
+
+    // Load config file
+    async function loadConfig() {
+      const fileInput = document.getElementById('configFile');
+      const file = fileInput.files[0];
+      if (!file) return alert('يرجى اختيار ملف JSON');
+      
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        userConfig = JSON.parse(e.target.result);
+        document.getElementById('balance').textContent = 'تم تحميل الملف. اضغط لتحديث الرصيد.';
+      };
+      reader.readAsText(file);
+    }
+
+    // Fetch balance
+    async function fetchBalance() {
+      if (!userConfig) return alert('يرجى تحميل ملف الإعدادات أولاً');
+      
+      const response = await fetch(`${serverUrl}/balances`);
+      const balances = await response.json();
+      const balance = balances[userConfig.publicKey] || 0;
+      document.getElementById('balance').textContent = `الرصيد: ${balance}`;
+    }
+
+    // Send transaction
+    async function sendTransaction() {
+      if (!userConfig) return alert('يرجى تحميل ملف الإعدادات أولاً');
+      
+      const recipient = document.getElementById('recipient').value;
+      const amount = parseFloat(document.getElementById('amount').value);
+      
+      if (!recipient || !amount) return alert('يرجى إدخال جميع الحقول');
+      
+      const message = `${userConfig.publicKey}${recipient}${amount}`;
+      const signature = CryptoJS.HmacSHA256(message, userConfig.privateKey).toString(CryptoJS.enc.Hex);
+      
+      const response = await fetch(`${serverUrl}/transaction`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender: userConfig.publicKey,
+          recipient,
+          amount,
+          signature
+        })
+      });
+      
+      const result = await response.json();
+      alert(result.message || result.error);
+    }
+
+    // Mine block
+    async function mineBlock() {
+      const response = await fetch(`${serverUrl}/mine`, { method: 'POST' });
+      const result = await response.json();
+      alert(result.message || result.error);
+    }
+
+    // Connect to another miner
+    async function connectToMiner() {
+      const host = document.getElementById('minerHost').value;
+      const port = document.getElementById('minerPort').value;
+      
+      if (!host || !port) return alert('يرجى إدخال المضيف والمنفذ');
+      
+      const response = await fetch(`${serverUrl}/connect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ host, port })
+      });
+      
+      const result = await response.json();
+      alert(result.message || result.error);
+    }
+  </script>
+</body>
+</html>
